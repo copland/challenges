@@ -1,34 +1,36 @@
 from data import DICTIONARY, LETTER_SCORES
+from multiprocessing import Pool
 
 def load_words():
     """Load dictionary into a list and return list"""
     with open(DICTIONARY, 'r') as f:
-        return [word.strip('\n') for word in f.readlines()]
+        content = f.read()
+        return content.split('\n')[:-1]
+
+def _is_valid_char(char):
+    return True if LETTER_SCORES.get(char.upper(), None) else False 
+
+def _accumulate_score(acc, nxt):
+    return acc+LETTER_SCORES[nxt.upper()] if _is_valid_char(nxt) else acc
 
 def calc_word_value(word):
     """Calculate the value of the word entered into function
     using imported constant mapping LETTER_SCORES"""
-    score = 0
-    for letter in word:
-        if letter.upper() in LETTER_SCORES.keys(): #should we disqualify words with bad characters?
-            score += LETTER_SCORES[letter.upper()]
-    return score
-    
+    return reduce(_accumulate_score , word, 0) 
+
 def max_word_value(words=None):
-    """Calculate the word with the max value, can receive a list
-    of words as arg, if none provided uses default DICTIONARY
-    """
     if not words:
         words = load_words()
+    p = Pool(10)
+    scores = p.map(calc_word_value, words)
     max_score = 0
-    best_word = '' 
-    for word in words:
-        word_score = calc_word_value(word)
-        if word_score > max_score:
-            max_score = word_score
-            best_word = word
-    return best_word 
-        
-
+    max_index = -1
+    for i, score in enumerate(scores):
+        if score > max_score:
+            max_score = score
+            max_index = i
+    return words[max_index]
+    
 if __name__ == "__main__":
-    pass # run unittests to validate
+    max_word_value() 
+     
